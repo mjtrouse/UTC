@@ -1,0 +1,424 @@
+---
+title: "Data_Analysis_MD"
+author: "Melanie Trouse"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+##Read in Data downloaded from Kaggle.com
+BANK_DF<-read.csv('BankChurners.csv')
+#remove 2 last columns
+BANK_DF<-BANK_DF[c(1:(length(BANK_DF)-2))]
+
+```
+
+```{r}
+####Data Cleaning
+
+##Check columns for renaming and datatypes
+summary(BANK_DF)
+str(BANK_DF)
+##check for missing values(none)
+is.null(BANK_DF)
+```
+
+```{r}
+##Check Outliers for erroneous entries
+#Check boxplots
+library(reshape)
+library(ggplot2)
+
+#Reshape data into long format
+BANK_DF_MELT<-melt(BANK_DF)
+
+plot<-ggplot(BANK_DF_MELT, aes(factor(variable), value))
+plot + geom_boxplot() + facet_wrap(~variable, scale="free")
+
+#Customer_Age(fine)
+colname<-"Customer_Age"
+colind<-which(names(BANK_DF)==colname)
+boxplot(BANK_DF[,colind])
+out<-boxplot.stats(BANK_DF[,colind])$out
+out_ind <-which(BANK_DF[,colind] %in% c(out))
+BANK_DF[out_ind,colind]
+
+#Months_on_book(fine)
+colname<-"Months_on_book"
+colind<-which(names(BANK_DF)==colname)
+boxplot(BANK_DF[,colind])
+out<-boxplot.stats(BANK_DF[,colind])$out
+out_ind <-which(BANK_DF[,colind] %in% c(out))
+BANK_DF[out_ind,colind]
+
+#Months_Inactive_12_mon(fine)
+colname<-"Months_Inactive_12_mon"
+colind<-which(names(BANK_DF)==colname)
+boxplot(BANK_DF[,colind])
+out<-boxplot.stats(BANK_DF[,colind])$out
+out_ind <-which(BANK_DF[,colind] %in% c(out))
+BANK_DF[out_ind,colind]
+
+#Contacts_Count_12_mon(fine)
+colname<-"Contacts_Count_12_mon"
+colind<-which(names(BANK_DF)==colname)
+boxplot(BANK_DF[,colind])
+out<-boxplot.stats(BANK_DF[,colind])$out
+out_ind <-which(BANK_DF[,colind] %in% c(out))
+BANK_DF[out_ind,colind]
+
+#Credit_Limit(fine)
+colname<-"Credit_Limit"
+colind<-which(names(BANK_DF)==colname)
+boxplot(BANK_DF[,colind])
+out<-boxplot.stats(BANK_DF[,colind])$out
+out_ind <-which(BANK_DF[,colind] %in% c(out))
+BANK_DF[out_ind,colind]
+sort(BANK_DF[out_ind, colind])
+
+#Avg_Open_To_Buy(fine)
+colname<-"Avg_Open_To_Buy"
+colind<-which(names(BANK_DF)==colname)
+boxplot(BANK_DF[,colind])
+out<-boxplot.stats(BANK_DF[,colind])$out
+out_ind <-which(BANK_DF[,colind] %in% c(out))
+BANK_DF[out_ind,colind]
+sort(BANK_DF[out_ind, colind])
+
+#Total_Amt_Chng_Q4_Q1(fine)
+colname<-"Total_Amt_Chng_Q4_Q1"
+colind<-which(names(BANK_DF)==colname)
+boxplot(BANK_DF[,colind])
+out<-boxplot.stats(BANK_DF[,colind])$out
+out_ind <-which(BANK_DF[,colind] %in% c(out))
+BANK_DF[out_ind,colind]
+sort(BANK_DF[out_ind, colind])
+
+#Total_Trans_Amt(fine)
+colname<-"Total_Trans_Amt"
+colind<-which(names(BANK_DF)==colname)
+boxplot(BANK_DF[,colind])
+out<-boxplot.stats(BANK_DF[,colind])$out
+out_ind <-which(BANK_DF[,colind] %in% c(out))
+BANK_DF[out_ind,colind]
+sort(BANK_DF[out_ind, colind])
+
+#Total_Trans_Ct(fine)
+colname<-"Total_Trans_Ct"
+colind<-which(names(BANK_DF)==colname)
+boxplot(BANK_DF[,colind])
+out<-boxplot.stats(BANK_DF[,colind])$out
+out_ind <-which(BANK_DF[,colind] %in% c(out))
+BANK_DF[out_ind,colind]
+sort(BANK_DF[out_ind, colind])
+
+#Total_Ct_Chng_Q4_Q1
+colname<-"Total_Ct_Chng_Q4_Q1"
+colind<-which(names(BANK_DF)==colname)
+boxplot(BANK_DF[,colind])
+out<-boxplot.stats(BANK_DF[,colind])$out
+out_ind <-which(BANK_DF[,colind] %in% c(out))
+BANK_DF[out_ind,colind]
+sort(BANK_DF[out_ind, colind])
+
+
+```
+
+```{r}
+##Check Distributions
+plot<-ggplot(BANK_DF_MELT, aes(x=value))
+plot + geom_histogram() + facet_wrap(~variable, scale="free")
+```
+
+Customer Age, Months on book, Dependent Count, Contacts Count 12 months appear Normally distributed
+Credit Limit, Total Transaction amount, Average open to buy, Average Utilization Ratio all right skewed
+Total Transaction count is bimodal- would be interesting to see what other features are connected to those peaks
+```{r}
+##Check relationships between variables
+#create df copy
+BANK_DF_ENCODED<-BANK_DF
+
+#function to encode
+encode_ordinal<- function(x, order= unique(x)) {
+  x<-as.numeric(factor(x, levels=order, exclude=NULL))
+  x
+}
+
+#get all categorical columns
+cat_cols<-unname(which(sapply(BANK_DF,class) == "character"))
+
+#encode cat columns
+for (i in cat_cols) {
+  BANK_DF_ENCODED[,i]<- encode_ordinal(BANK_DF[,i])
+}
+
+#create copy of DF without client number
+BANK_DF_NoCLIENT<-BANK_DF_ENCODED[c(2:length(BANK_DF_ENCODED))]
+
+#scatterplot matrix
+pairs(BANK_DF_NoCLIENT)
+```
+
+
+```{r}
+##Check Pearson correlations
+library(Hmisc)
+library(ggplot2)
+
+#Correlation matrix
+cor_data<-cor(BANK_DF_NoCLIENT)
+cor_data
+
+#get correlations with p-values
+cor_data_p<-rcorr(as.matrix(BANK_DF_NoCLIENT))
+
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+cor_data_p_flat<-flattenCorrMatrix(cor_data_p$r, cor_data_p$P)
+
+#get significant correlations
+cor_data_p_flat_sig<-subset(cor_data_p_flat, cor_data_p_flat$p<0.05)
+
+#heatmap of sig correlations
+ggplot(cor_data_p_flat_sig, aes(x=row, y=column, fill=cor))+ geom_tile() + labs(x=NULL, y = NULL) + theme(axis.text.x = element_text(angle=90))
+
+#get correlations greater than 0.5
+cor_data_pairs<-subset(cor_data_p_flat_sig, (cor_data_p_flat_sig$cor>=0.5 | cor_data_p_flat_sig$cor<= -0.5))
+
+#reset row index
+rownames(cor_data_pairs)<-NULL
+
+#save significant correlations as table
+
+write.csv(cor_data_pairs, "Large_significant_cors.csv")
+  
+```
+
+```{r}
+##Scatterplots of significant Pearson correlations
+#create subset of encoded DF 
+BANK_DF_ENCODED_sig<-BANK_DF_ENCODED[ c(unique(cor_data_pairs$row, cor_data_pairs$column))]
+
+for (i in 1:nrow(cor_data_pairs)){
+  col1<-cor_data_pairs$row[i]
+  col2<-cor_data_pairs$column[i]
+  print(ggplot(data=BANK_DF_ENCODED, aes(x= .data[[col1]], y=.data[[col2]]))+
+    geom_point(color = "darkblue", stat="identity"))+
+    xlab(col1)+
+    ylab(col2)
+}
+```
+
+```{r}
+##Check pearson correlations between Attrition and all other vars
+cor(x= BANK_DF_ENCODED$Attrition_Flag,y=as.matrix(BANK_DF_NoCLIENT))
+#strongest Pearson= Total Trans Count
+
+plot(BANK_DF_ENCODED$Attrition_Flag~BANK_DF_ENCODED$Total_Trans_Ct)
+
+plot(BANK_DF_ENCODED$Attrition_Flag ~ BANK_DF_ENCODED$Contacts_Count_12_mon)
+
+##Check Spearman's rank correlations between Attrition and all other vars
+cor(x= BANK_DF_ENCODED$Attrition_Flag,y=as.matrix(BANK_DF_NoCLIENT), method = "spearman")
+#strongest Spearman's= Total Trans Count
+
+#Correlations with p-values for Attrition vs. all others
+ggplot(cor_data_p_flat_sig[cor_data_p_flat_sig$row=="Attrition_Flag",], aes(x=row, y=column, fill=cor)) +
+         geom_tile()+
+  labs(x=NULL, y=NULL, fill="Significant Pearson's\n Correlation")
+```
+
+```{r}
+##Look at mosaic plots and discrepancy for categorical variables 
+library(regclass)
+associate(BANK_DF$Attrition_Flag~BANK_DF$Gender, permutations=100)  #significant p-value for discrepancy
+
+associate(BANK_DF$Attrition_Flag~BANK_DF$Education_Level, permutations=100)
+
+```
+
+```{r}
+library(regclass)
+library(MASS)
+library(tidyverse)
+library(broom)
+##Linear Models
+
+#Full search LM by AIC
+full<-lm(Attrition_Flag~., data=BANK_DF_NoCLIENT)
+
+###################################
+#Step using AIC
+step_mod<-stepAIC(full, direction="both", trace=FALSE)
+
+AIC(step_mod)
+
+AIC(full)
+
+summary(step_mod)
+
+#Check Variable inflation 
+VIF(step_mod)
+
+#VIF limit
+vif_lim<- 1/(1- summary(step_mod)$r.squared)
+
+#find predictor variables under VIF limit
+vif_low<-c()
+for (i in 1:length(VIF(step_mod))){
+  if (unname(VIF(step_mod)[i]) < vif_lim) {
+    vif_low<-append(vif_low,names(VIF(step_mod))[i])
+  }
+}
+
+#create subset of vif_low and outcome
+BANK_DF_NoCLIENT2<-BANK_DF_NoCLIENT[c("Attrition_Flag", vif_low)]
+
+step_mod2<-lm(Attrition_Flag~., data=BANK_DF_NoCLIENT2)
+
+summary(step_mod2) #worse model
+
+#try with step function (SAME RESULTS)
+step_mod3<-step(full, direction="both")
+summary(step_mod3)
+
+##################################
+#Check Regression assumptions
+regclass::check_regression(step_mod)
+
+metrics_step_mod<-augment(step_mod)
+
+plot(step_mod)
+
+##Bad residuals
+##################################################
+#Check LM with interactions
+full_int<-lm(Attrition_Flag~.^2, data=BANK_DF_NoCLIENT)
+summary(full_int) #no results
+```
+
+
+```{r}
+
+```
+
+```{r}
+# ##Logistic Regression model
+# 
+# #change Attrition Flag values to 0,1
+# BANK_DF_NoCLIENT$Attrition_Flag[BANK_DF_NoCLIENT$Attrition_Flag == 1]<-0
+# BANK_DF_NoCLIENT$Attrition_Flag[BANK_DF_NoCLIENT$Attrition_Flag == 2]<-1
+# 
+# base_glm<-glm(Attrition_Flag ~ 1, data=BANK_DF_NoCLIENT, family="binomial")
+# full_glm<-glm(Attrition_Flag~., data=BANK_DF_NoCLIENT, family ="binomial")
+# 
+# step_gml<-stepAIC(base_glm, direction = "both", scope=full_glm, trace=FALSE)
+# 
+# summary(full_glm)
+
+```
+
+```{r}
+library(regclass)
+#remove client number from bankdf
+BANK_DF<-BANK_DF[-1]
+##Logistic model fit to non-encoded data
+BANK_DF$Attrition_Flag<-as.factor(BANK_DF$Attrition_Flag )
+
+#full model
+M<-glm(Attrition_Flag ~., data=BANK_DF, family=binomial)
+summary(M)
+cf_glm<-confusion_matrix(M)
+#misclassification rate (about 9.5%)
+(cf_glm[2] + cf_glm[4])/cf_glm[9]
+
+#compare to naive model to get p-value of full-model(~0)
+M.naive<-glm(Attrition_Flag ~ 1, data=BANK_DF, family = binomial)
+anova(M.naive, M, test="Chisq")
+
+#compare misclassification rate
+cf_glm_n<-confusion_matrix(M.naive)
+#misclassification rate (~16%, model improved misclassification rate)
+cf_glm_n[1]/(cf_glm_n[1]+ cf_glm_n[2])
+
+#Goodness of fit
+check_regression(M) #GOF p-value > 0.05 = statistically valid  description of probability change with predictors
+
+
+#effect test
+M_eff<-drop1(M, test="Chisq", trace=TRUE)
+#gender significant as set
+#education level NOT sig as set
+#marital status sig as set
+#income cat sig as set
+#card category sig as set
+
+#remove avg_utilization_ratio, months on book, customer age and see if improves model
+# drop_fields<-c()
+# for (i in 1:length(M$model)){
+#   if (coef(summary(M))[i,4]>0.05){
+#     drop_fields<-append(drop_fields, names(M$model)[i])
+#   }
+# }
+
+########################################################################
+#Check glm model with 2 predictors(highest AIC when dropped in effect test)
+
+M_2<-glm(Attrition_Flag~Total_Trans_Amt + Total_Trans_Ct, data= BANK_DF, family='binomial')
+summary(M_2)
+visualize_model(M_2, loc= "bottomright", cex.leg = 0.5)
+
+
+#compare to naive(sig. improvement)
+anova(M.naive, M_2, test="Chisq")
+
+#compare to full(sig. improvement)
+anova(M_2, M, test="Chisq")
+
+#residuals and leverage plots
+plot(M_2)
+
+#Goodness of Fit test
+check_regression(M_2) #Method 1 p-value = 1 (> 0.05, significant description of probability change with predictors). Method 2 p-value = 0 (not significant but H-L test is "overly sensitive for large sample sizes")
+
+#Confusion Matrix/ Misclassification rate
+cf_M2<- confusion_matrix(M_2)
+(cf_M2[2] + cf_M2[4])/cf_M2[9] #0.1778 ~18% !Worse misclassification rate than Naive model
+
+#############################################################################
+##Fit model with three highest AIC in effect  test model
+
+M_3<-glm(Attrition_Flag~Total_Trans_Amt + Total_Trans_Ct + Total_Ct_Chng_Q4_Q1, data=BANK_DF,  family= binomial)
+
+summary(M_3)
+#All predictors significant, Delta AIC from 2-variable model of ~700
+
+#compare models
+anova(M_2, M_3, test="Chisq")
+anova(M_3, M, test="Chisq")
+anova(M.naive, M_3, test="Chisq")
+#Significant improvement with 3 variable model when compared to naive, full, and 2-variable
+
+#Goodness of fit
+check_regression(M_3) #same results as M_2 (Method 1 significant, Method 2 not)
+
+#Mis-classification rate
+cf_M3<-confusion_matrix(M_3)
+(cf_M3[2] + cf_M3[4])/cf_M3[9] #0.15, ~15% better than Naive & 2-variable model, higher by 6% than Full model
+
+```
+
